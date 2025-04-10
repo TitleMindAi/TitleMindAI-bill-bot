@@ -39,7 +39,22 @@ def send_payment_options(chat_id):
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(chat_id=chat_id, text="💳 Choose a payment option below:", reply_markup=reply_markup)
 
+def deduct_user_credits(telegram_id, amount=3):
+    user = supabase.table("users").select("doc_balance").eq("telegram_id", str(telegram_id)).single().execute().data
+    if not user:
+        return False, "⚠️ User not found."
+    current_balance = user.get("doc_balance", 0)
+    if current_balance < amount:
+        return False, f"🚫 You need {amount} credits to process a document. Use /addfunds to reload."
+    supabase.table("users").update({"doc_balance": current_balance - amount}).eq("telegram_id", str(telegram_id)).execute()
+    return True, f"✅ {amount} credits deducted. Remaining: {current_balance - amount}"
+
 def process_upload(chat_id, context: CallbackContext, headers: list):
+    ok, msg = deduct_user_credits(chat_id, amount=3)
+    if not ok:
+        bot.send_message(chat_id=chat_id, text=msg)
+        return
+
     file = context.user_data["pending_file"]
     file_id = file.file_id
     file_name = file.file_name
@@ -74,9 +89,7 @@ def respond():
         context.user_data["pending_file"] = update.message.document
         bot.send_message(
             chat_id=chat_id,
-            text="📂 File received!
-
-📋 Now please paste your Excel column headers (copied from Excel)."
+            text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
         )
 
     elif "\t" in message_text:
@@ -85,26 +98,46 @@ def respond():
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(chat_id=chat_id, text="✅ Headers saved.
-Tap below to build your runsheet.", reply_markup=reply_markup)
+            bot.send_message(
+                chat_id=chat_id,
+                text="✅ Headers saved.\nTap below to build your runsheet.",
+                reply_markup=reply_markup
+            )
         else:
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
 
     elif message_text == "/start":
-        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI. Upload your lease, then paste your headers.")
+        existing = supabase.table("users").select("telegram_id").eq("telegram_id", str(chat_id)).execute().data
+        if not existing:
+            supabase.table("users").insert({"telegram_id": str(chat_id), "doc_balance": 3}).execute()
+            bot.send_message(
+                chat_id=chat_id,
+                text="👋 Welcome to TitleMind AI!\n\nYou’ve been granted 3 free credits to try it out.\n\nUpload a lease and paste your headers to begin."
+            )
+        else:
+            bot.send_message(
+                chat_id=chat_id,
+                text="👋 Welcome back to TitleMind AI.\n\nUpload your lease, then paste your headers."
+            )
+
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
         context.user_data.pop("headers", None)
         bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
-    elif message_text == "/help":
-        bot.send_message(chat_id=chat_id, text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
 
-Use /addfunds to purchase processing credits.")
+    elif message_text == "/help":
+        bot.send_message(
+            chat_id=chat_id,
+            text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds to purchase processing credits."
+        )
+
     elif message_text == "/balance":
         balance = get_user_balance(chat_id)
         bot.send_message(chat_id=chat_id, text=f"💳 You currently have {balance} credits available.")
+
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
+
     else:
         bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
 
