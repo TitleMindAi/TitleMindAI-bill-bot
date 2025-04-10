@@ -88,8 +88,7 @@ def respond():
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
         bot.send_message(
-            chat_id=chat_id,
-            text="📂 File received!
+            chat_id=chat_id,text="📂 File received!")
 
 📋 Now please paste your Excel column headers (copied from Excel)."
         )
