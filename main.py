@@ -74,23 +74,18 @@ def respond():
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(chat_id=chat_id,text="✅ Headers saved.\nTap below to build your runsheet:"
-)
-        else:
-            bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
+            bot.send_message(chat_id=chat_id,text="✅ Headers saved.\nTap below to build your runsheet.",reply_markup=reply_markup)
 
     elif message_text == "/start":
-        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI.")
-
-Upload your lease, then paste your headers.")
+        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI. Upload your lease, then paste your headers.")
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
         context.user_data.pop("headers", None)
         bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
     elif message_text == "/help":
-        bot.send_message(chat_id=chat_id, text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
-
-Use /addfunds or /subscribe.")
+        bot.send_message(
+    chat_id=chat_id,
+    text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds or /subscribe.")
     elif message_text == "/balance":
         bot.send_message(chat_id=chat_id, text="💳 You currently have $12.00 in processing balance.")
     elif message_text == "/addfunds":
