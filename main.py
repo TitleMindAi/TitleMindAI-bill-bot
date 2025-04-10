@@ -26,11 +26,9 @@ user_sessions = {}
 def send_payment_options(chat_id):
     base_url = "https://titlemind-ai-bill-bot.onrender.com/thankyou"
     cancel_url = "https://titlemind.ai"
-
     one_doc = create_checkout_session("prod_S60geJuhqiu443", chat_id, base_url, cancel_url)
     bulk_credits = create_checkout_session("prod_S6PNByjSPapXYG", chat_id, base_url, cancel_url)
     one_dollar = create_checkout_session("prod_S6PPodvScaPPHK", chat_id, base_url, cancel_url)
-
     keyboard = [
         [InlineKeyboardButton("💳 Process 1 Doc ($3)", url=one_doc)],
         [InlineKeyboardButton("💳 Add 105 Credits ($60)", url=bulk_credits)],
@@ -54,21 +52,16 @@ def process_upload(chat_id, context: CallbackContext, headers: list):
     if not ok:
         bot.send_message(chat_id=chat_id, text=msg)
         return
-
     file = context.user_data["pending_file"]
     file_id = file.file_id
     file_name = file.file_name
-
     new_file = bot.get_file(file_id)
     file_bytes = new_file.download_as_bytearray()
     local_path = save_uploaded_file(file_bytes, file_name)
-
     text = extract_text_from_pdf(local_path)
     data_rows = parse_lease_text_to_fields(text)
-
     output_filename = f"output_{file_id}.tsv"
     output_path = write_to_tsv(data_rows, headers, output_filename)
-
     with open(output_path, "rb") as f:
         bot.send_document(chat_id=chat_id, document=f)
 
@@ -81,68 +74,69 @@ def respond():
     update = Update.de_json(request.get_json(force=True), bot)
     chat_id = update.message.chat.id
     message_text = update.message.text if update.message else ""
-
     context = CallbackContext(bot)
     context.user_data = user_sessions.setdefault(chat_id, {})
 
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
-       bot.send_message(
-    chat_id=chat_id,
-    text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
-)
+        bot.send_message(
+            chat_id=chat_id,
+            text="📂 File received!
+
+📋 Now please paste your Excel column headers (copied from Excel)."
+        )
     elif "	" in message_text:
         headers = message_text.strip().split("	")
         context.user_data["headers"] = headers
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-           bot.send_message(
-    chat_id=chat_id,
-    text="✅ Headers saved.\nTap below to build your runsheet.",
-    reply_markup=reply_markup
-)
+            bot.send_message(
+                chat_id=chat_id,
+                text="✅ Headers saved.
+Tap below to build your runsheet.",
+                reply_markup=reply_markup
+            )
         else:
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
-
     elif message_text == "/start":
         existing = supabase.table("users").select("telegram_id").eq("telegram_id", str(chat_id)).execute().data
         if not existing:
             supabase.table("users").insert({"telegram_id": str(chat_id), "doc_balance": 3}).execute()
             bot.send_message(
-    chat_id=chat_id,
-    text="👋 Welcome to TitleMind AI!\n\nYou’ve been granted 3 free credits to try it out.\n\nUpload a lease and paste your headers to begin."
-)
-        else:
-            bot.send_message(chat_id=chat_id,
-    text="👋 Welcome back to TitleMind AI.\n\nUpload your lease, then paste your headers."
-)
+                chat_id=chat_id,
+                text="👋 Welcome to TitleMind AI!
 
+You’ve been granted 3 free credits to try it out.
+
+Upload a lease and paste your headers to begin."
+            )
+        else:
+            bot.send_message(
+                chat_id=chat_id,
+                text="👋 Welcome back to TitleMind AI.
+
+Upload your lease, then paste your headers."
+            )
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
         context.user_data.pop("headers", None)
         bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
-
     elif message_text == "/help":
         bot.send_message(
-    chat_id=chat_id,
-    text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds to purchase processing credits."
-)
+            chat_id=chat_id,
+            text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
 
 Use /addfunds to purchase processing credits."
         )
-
     elif message_text == "/balance":
         balance = get_user_balance(chat_id)
         bot.send_message(chat_id=chat_id, text=f"💳 You currently have {balance} credits available.")
-
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
-
     else:
         if not context.user_data.get("pending_file") and not "	" in message_text:
             bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
-
     return "ok"
 
 @app.route(f"/{TELEGRAM_TOKEN}/callback", methods=["POST"])
