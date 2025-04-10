@@ -81,9 +81,7 @@ def respond():
         context.user_data["pending_file"] = update.message.document
         bot.send_message(
             chat_id=chat_id,
-            text="📂 File received!
-
-📋 Now please paste your Excel column headers (copied from Excel)."
+            text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
         )
     elif "	" in message_text:
         headers = message_text.strip().split("	")
