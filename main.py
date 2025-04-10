@@ -63,9 +63,10 @@ def respond():
 
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
-        bot.send_message(chat_id=chat_id, text="📂 File received!
-
-📋 Now please paste your Excel column headers (copied from Excel).")
+        bot.send_message(
+            chat_id=chat_id,
+            text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
+        )
 
     elif "\t" in message_text:
         headers = message_text.strip().split("\t")
