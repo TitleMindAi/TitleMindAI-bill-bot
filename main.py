@@ -74,8 +74,8 @@ def respond():
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(chat_id=chat_id, text="✅ Headers saved.
-Tap below to build your runsheet:", reply_markup=reply_markup)
+            bot.send_message(chat_id=chat_id,text="✅ Headers saved.\nTap below to build your runsheet:"
+)
         else:
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
 
