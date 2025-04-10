@@ -87,24 +87,21 @@ def respond():
 
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
-        bot.send_message(
-            chat_id=chat_id,text="📂 File received!")
-
-📋 Now please paste your Excel column headers (copied from Excel)."
-        )
-
+       bot.send_message(
+    chat_id=chat_id,
+    text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
+)
     elif "	" in message_text:
         headers = message_text.strip().split("	")
         context.user_data["headers"] = headers
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(
-                chat_id=chat_id,
-                text="✅ Headers saved.
-Tap below to build your runsheet.",
-                reply_markup=reply_markup
-            )
+           bot.send_message(
+    chat_id=chat_id,
+    text="✅ Headers saved.\nTap below to build your runsheet.",
+    reply_markup=reply_markup
+)
         else:
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
 
@@ -113,20 +110,13 @@ Tap below to build your runsheet.",
         if not existing:
             supabase.table("users").insert({"telegram_id": str(chat_id), "doc_balance": 3}).execute()
             bot.send_message(
-                chat_id=chat_id,
-                text="👋 Welcome to TitleMind AI!
-
-You’ve been granted 3 free credits to try it out.
-
-Upload a lease and paste your headers to begin."
-            )
+    chat_id=chat_id,
+    text="👋 Welcome to TitleMind AI!\n\nYou’ve been granted 3 free credits to try it out.\n\nUpload a lease and paste your headers to begin."
+)
         else:
-            bot.send_message(
-                chat_id=chat_id,
-                text="👋 Welcome back to TitleMind AI.
-
-Upload your lease, then paste your headers."
-            )
+            bot.send_message(chat_id=chat_id,
+    text="👋 Welcome back to TitleMind AI.\n\nUpload your lease, then paste your headers."
+)
 
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
@@ -135,8 +125,9 @@ Upload your lease, then paste your headers."
 
     elif message_text == "/help":
         bot.send_message(
-            chat_id=chat_id,
-            text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
+    chat_id=chat_id,
+    text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds to purchase processing credits."
+)
 
 Use /addfunds to purchase processing credits."
         )
