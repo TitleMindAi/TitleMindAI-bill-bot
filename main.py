@@ -80,7 +80,7 @@ def respond():
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
 
     elif message_text == "/start":
-        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI.
+        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI.")
 
 Upload your lease, then paste your headers.")
     elif message_text == "/reset_headers":
