@@ -1,0 +1,94 @@
+import os
+from flask import Flask, request
+from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import CallbackContext
+from dotenv import load_dotenv
+
+from upload_handler import save_uploaded_file
+from ocr_engine import extract_text_from_pdf
+from parser import parse_lease_text_to_fields
+from formatter import write_to_tsv
+
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+bot = Bot(token=TELEGRAM_TOKEN)
+
+app = Flask(__name__)
+user_sessions = {}
+
+def send_payment_options(chat_id):
+    keyboard = [
+        [InlineKeyboardButton("💳 Add $3 (1 Doc)", url="https://buy.stripe.com/test_4gw14efV17zGakM144")],
+        [InlineKeyboardButton("💳 Add $25 (Bulk)", url="https://buy.stripe.com/test_dR6dUO3oz2WAaHm8ww")],
+        [InlineKeyboardButton("📅 $750 Unlimited", url="https://buy.stripe.com/test_aEU3eE0mR5zM9Ne6op")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(chat_id=chat_id, text="Choose a payment option:", reply_markup=reply_markup)
+
+def process_upload(update: Update, context: CallbackContext, headers: list):
+    file = context.user_data["pending_file"]
+    file_id = file.file_id
+    file_name = file.file_name
+
+    new_file = bot.get_file(file_id)
+    file_bytes = new_file.download_as_bytearray()
+    local_path = save_uploaded_file(file_bytes, file_name)
+
+    text = extract_text_from_pdf(local_path)
+    data_rows = parse_lease_text_to_fields(text)
+
+    output_filename = f"output_{file_id}.tsv"
+    output_path = write_to_tsv(data_rows, headers, output_filename)
+
+    with open(output_path, "rb") as f:
+        bot.send_document(chat_id=update.message.chat_id, document=f)
+
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+def respond():
+    update = Update.de_json(request.get_json(force=True), bot)
+    chat_id = update.message.chat.id
+    message_text = update.message.text if update.message else ""
+
+    context = CallbackContext(bot)
+    context.user_data = user_sessions.setdefault(chat_id, {})
+
+    if update.message.document:
+        context.user_data["pending_file"] = update.message.document
+        bot.send_message(chat_id=chat_id, text="📂 File received!
+📋 Now please paste your Excel column headers (copied straight from Excel).")
+
+    elif "\t" in message_text:
+        headers = message_text.strip().split("\t")
+        if "pending_file" in context.user_data:
+            process_upload(update, context, headers)
+            del context.user_data["pending_file"]
+        else:
+            bot.send_message(chat_id=chat_id, text="⚠️ Upload a file before pasting headers.")
+
+    elif message_text == "/start":
+        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI. Upload a lease, then paste your headers.")
+    elif message_text == "/reset_headers":
+        context.user_data.pop("pending_file", None)
+        bot.send_message(chat_id=chat_id, text="✅ File and header memory cleared.")
+    elif message_text == "/help":
+        bot.send_message(chat_id=chat_id, text="Upload a lease or title doc, then paste your Excel column headers. Use /addfunds to pay or /subscribe for unlimited.")
+    elif message_text == "/balance":
+        bot.send_message(chat_id=chat_id, text="💳 You currently have $12.00 in processing balance.")
+    elif message_text == "/addfunds":
+        send_payment_options(chat_id)
+    elif message_text == "/subscribe":
+        bot.send_message(chat_id=chat_id, text="📅 Unlimited plan: $750/month for up to 1,000 documents.")
+        send_payment_options(chat_id)
+    else:
+        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your file.")
+
+    return "ok"
+
+@app.route("/")
+def index():
+    return "🧠 TitleMindBot is running."
+
+if __name__ == "__main__":
+    print("🚀 Flask server starting...")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
