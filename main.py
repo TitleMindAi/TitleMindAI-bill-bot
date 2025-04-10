@@ -79,9 +79,11 @@ def respond():
 
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
-       bot.send_message(chat_id=chat_id, text="📂 File received!\n\n📋 Now please paste your Excel column headers.")
+        bot.send_message(chat_id=chat_id, text="📂 File received!
 
-    elif "	" in message_text:
+📋 Now please paste your Excel column headers.")
+
+    elif "\t" in message_text or "	" in message_text:
         headers = message_text.strip().split("	")
         context.user_data["headers"] = headers
         if "pending_file" in context.user_data:
@@ -91,6 +93,7 @@ def respond():
 Tap below to build your runsheet.", reply_markup=reply_markup)
         else:
             bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
+
     elif message_text == "/start":
         existing = supabase.table("users").select("telegram_id").eq("telegram_id", str(chat_id)).execute().data
         if not existing:
@@ -104,22 +107,28 @@ Upload a lease and paste your headers to begin.")
             bot.send_message(chat_id=chat_id, text="👋 Welcome back to TitleMind AI.
 
 Upload your lease, then paste your headers.")
+
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
         context.user_data.pop("headers", None)
         bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
+
     elif message_text == "/help":
         bot.send_message(chat_id=chat_id, text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
 
 Use /addfunds to purchase processing credits.")
+
     elif message_text == "/balance":
         balance = get_user_balance(chat_id)
         bot.send_message(chat_id=chat_id, text=f"💳 You currently have {balance} credits available.")
+
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
+
     else:
         if not context.user_data.get("pending_file") and not "	" in message_text:
             bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
+
     return "ok"
 
 @app.route(f"/{TELEGRAM_TOKEN}/callback", methods=["POST"])
