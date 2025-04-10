@@ -89,18 +89,21 @@ def respond():
         context.user_data["pending_file"] = update.message.document
         bot.send_message(
             chat_id=chat_id,
-            text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
+            text="📂 File received!
+
+📋 Now please paste your Excel column headers (copied from Excel)."
         )
 
-    elif "\t" in message_text:
-        headers = message_text.strip().split("\t")
+    elif "	" in message_text:
+        headers = message_text.strip().split("	")
         context.user_data["headers"] = headers
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             bot.send_message(
                 chat_id=chat_id,
-                text="✅ Headers saved.\nTap below to build your runsheet.",
+                text="✅ Headers saved.
+Tap below to build your runsheet.",
                 reply_markup=reply_markup
             )
         else:
@@ -112,12 +115,18 @@ def respond():
             supabase.table("users").insert({"telegram_id": str(chat_id), "doc_balance": 3}).execute()
             bot.send_message(
                 chat_id=chat_id,
-                text="👋 Welcome to TitleMind AI!\n\nYou’ve been granted 3 free credits to try it out.\n\nUpload a lease and paste your headers to begin."
+                text="👋 Welcome to TitleMind AI!
+
+You’ve been granted 3 free credits to try it out.
+
+Upload a lease and paste your headers to begin."
             )
         else:
             bot.send_message(
                 chat_id=chat_id,
-                text="👋 Welcome back to TitleMind AI.\n\nUpload your lease, then paste your headers."
+                text="👋 Welcome back to TitleMind AI.
+
+Upload your lease, then paste your headers."
             )
 
     elif message_text == "/reset_headers":
@@ -128,7 +137,9 @@ def respond():
     elif message_text == "/help":
         bot.send_message(
             chat_id=chat_id,
-            text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds to purchase processing credits."
+            text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
+
+Use /addfunds to purchase processing credits."
         )
 
     elif message_text == "/balance":
@@ -139,7 +150,8 @@ def respond():
         send_payment_options(chat_id)
 
     else:
-        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
+        if not context.user_data.get("pending_file") and not "	" in message_text:
+            bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
 
     return "ok"
 
