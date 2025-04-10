@@ -3,6 +3,7 @@ from flask import Flask, request
 from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackContext
 from dotenv import load_dotenv
+from supabase import create_client
 
 from upload_handler import save_uploaded_file
 from ocr_engine import extract_text_from_pdf
@@ -13,7 +14,11 @@ from payment_handler import create_checkout_session
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
 bot = Bot(token=TELEGRAM_TOKEN)
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 app = Flask(__name__)
 user_sessions = {}
@@ -52,6 +57,10 @@ def process_upload(chat_id, context: CallbackContext, headers: list):
     with open(output_path, "rb") as f:
         bot.send_document(chat_id=chat_id, document=f)
 
+def get_user_balance(telegram_id):
+    user = supabase.table("users").select("doc_balance").eq("telegram_id", str(telegram_id)).single().execute().data
+    return user["doc_balance"] if user else 0
+
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def respond():
     update = Update.de_json(request.get_json(force=True), bot)
@@ -65,7 +74,9 @@ def respond():
         context.user_data["pending_file"] = update.message.document
         bot.send_message(
             chat_id=chat_id,
-            text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel)."
+            text="📂 File received!
+
+📋 Now please paste your Excel column headers (copied from Excel)."
         )
 
     elif "\t" in message_text:
@@ -74,7 +85,10 @@ def respond():
         if "pending_file" in context.user_data:
             keyboard = [[InlineKeyboardButton("🧾 Build My Runsheet", callback_data="build_runsheet")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(chat_id=chat_id,text="✅ Headers saved.\nTap below to build your runsheet.",reply_markup=reply_markup)
+            bot.send_message(chat_id=chat_id, text="✅ Headers saved.
+Tap below to build your runsheet.", reply_markup=reply_markup)
+        else:
+            bot.send_message(chat_id=chat_id, text="⚠️ Upload a file first.")
 
     elif message_text == "/start":
         bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI. Upload your lease, then paste your headers.")
@@ -83,16 +97,17 @@ def respond():
         context.user_data.pop("headers", None)
         bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
     elif message_text == "/help":
-        bot.send_message(
-    chat_id=chat_id,
-    text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.\n\nUse /addfunds or /subscribe.")
+        bot.send_message(chat_id=chat_id, text="📋 Upload a lease → paste headers → tap 🧾 Build My Runsheet.
+
+Use /addfunds to purchase processing credits.")
     elif message_text == "/balance":
-        bot.send_message(chat_id=chat_id, text="💳 You currently have $12.00 in processing balance.")
+        balance = get_user_balance(chat_id)
+        bot.send_message(chat_id=chat_id, text=f"💳 You currently have {balance} credits available.")
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
-    elif message_text == "/subscribe":
-    bot.send_message(chat_id=chat_id, text="This bot now uses credit-based pricing.\n\nUse /addfunds to buy processing credits.")
-    else:bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
+    else:
+        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
+
     return "ok"
 
 @app.route(f"/{TELEGRAM_TOKEN}/callback", methods=["POST"])
