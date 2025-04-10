@@ -146,7 +146,6 @@ def respond_callback():
     chat_id = query.message.chat.id
     context = CallbackContext(bot)
     context.user_data = user_sessions.setdefault(chat_id, {})
-
     if query.data == "build_runsheet":
         headers = context.user_data.get("headers")
         if "pending_file" in context.user_data and headers:
