@@ -24,7 +24,7 @@ def send_payment_options(chat_id):
         [InlineKeyboardButton("📅 $750 Unlimited", url="https://buy.stripe.com/test_aEU3eE0mR5zM9Ne6op")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.send_message(chat_id=chat_id, text="Choose a payment option:", reply_markup=reply_markup)
+    bot.send_message(chat_id=chat_id, text="💳 Choose a payment option below:", reply_markup=reply_markup)
 
 def process_upload(update: Update, context: CallbackContext, headers: list):
     file = context.user_data["pending_file"]
@@ -55,8 +55,7 @@ def respond():
 
     if update.message.document:
         context.user_data["pending_file"] = update.message.document
-        bot.send_message(chat_id=chat_id, text="📂 File received!
-📋 Now please paste your Excel column headers (copied straight from Excel).")
+        bot.send_message(chat_id=chat_id, text="📂 File received!\n\n📋 Now please paste your Excel column headers (copied from Excel).")
 
     elif "\t" in message_text:
         headers = message_text.strip().split("\t")
@@ -64,24 +63,24 @@ def respond():
             process_upload(update, context, headers)
             del context.user_data["pending_file"]
         else:
-            bot.send_message(chat_id=chat_id, text="⚠️ Upload a file before pasting headers.")
+            bot.send_message(chat_id=chat_id, text="⚠️ Upload a document first, then paste your headers.")
 
     elif message_text == "/start":
-        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI. Upload a lease, then paste your headers.")
+        bot.send_message(chat_id=chat_id, text="👋 Welcome to TitleMind AI.\n\nUpload your lease or title doc, then paste your column headers.")
     elif message_text == "/reset_headers":
         context.user_data.pop("pending_file", None)
-        bot.send_message(chat_id=chat_id, text="✅ File and header memory cleared.")
+        bot.send_message(chat_id=chat_id, text="🧼 File and header memory cleared.")
     elif message_text == "/help":
-        bot.send_message(chat_id=chat_id, text="Upload a lease or title doc, then paste your Excel column headers. Use /addfunds to pay or /subscribe for unlimited.")
+        bot.send_message(chat_id=chat_id, text="📋 Upload a lease/title doc → paste headers from Excel → get your .tsv.\n\nUse /addfunds to buy credits or /subscribe for unlimited.")
     elif message_text == "/balance":
         bot.send_message(chat_id=chat_id, text="💳 You currently have $12.00 in processing balance.")
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
     elif message_text == "/subscribe":
-        bot.send_message(chat_id=chat_id, text="📅 Unlimited plan: $750/month for up to 1,000 documents.")
+        bot.send_message(chat_id=chat_id, text="📅 $750 Unlimited plan → up to 1,000 docs/month.")
         send_payment_options(chat_id)
     else:
-        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your file.")
+        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
 
     return "ok"
 
