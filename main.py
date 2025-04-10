@@ -91,9 +91,8 @@ def respond():
     elif message_text == "/addfunds":
         send_payment_options(chat_id)
     elif message_text == "/subscribe":
-    bot.send_message(chat_id=chat_id, text="This bot now uses credit-based pricing.\nUse /addfunds to buy processing credits.")
-    else:
-        bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
+    bot.send_message(chat_id=chat_id, text="This bot now uses credit-based pricing.\n\nUse /addfunds to buy processing credits.")
+    else:bot.send_message(chat_id=chat_id, text="🧾 Got it. If that was a document, paste your headers next. Otherwise, upload your lease.")
     return "ok"
 
 @app.route(f"/{TELEGRAM_TOKEN}/callback", methods=["POST"])
